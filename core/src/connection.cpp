@@ -86,7 +86,6 @@ void Connection::setReadChunk(size_t bytes) {
 }
 
 void Connection::dispatch(const std::string& payload) {
-    // First token is the command
     std::istringstream iss(payload);
     std::string cmd;
     if (!(iss >> cmd)) return;
@@ -99,9 +98,14 @@ void Connection::dispatch(const std::string& payload) {
     }
     if (!h) return;
 
-    auto copy = payload;
+    if (iss.peek() == '\n') iss.get();
+
+    std::string rest;
+    std::getline(iss, rest, '\0');
+    if (!rest.empty() && rest[0] == ' ') rest.erase(0, 1);
+
     [[maybe_unused]] auto fut =
-        std::async(std::launch::async, [this, copy, h] { h(*this, copy); });
+        std::async(std::launch::async, [this, rest, h] { h(*this, rest); });
 }
 
 void Connection::readLoop() {

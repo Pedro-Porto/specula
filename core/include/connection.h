@@ -87,6 +87,10 @@ class Connection {
      */
     void setReadChunk(size_t bytes);
 
+    int getCfd() { return fd_; }
+
+    bool isAuthenticated{false};
+
    private:
     // states
     int fd_;
