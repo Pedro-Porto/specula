@@ -143,41 +143,42 @@ void Console::runExec(bool all, int conn_id, std::string& cmd) {
     };
 
     if (all) {
-        std::vector<int> launched;
+        std::vector<std::pair<int, int>> launched;
         server_.forEachConn([&](Connection& c) {
             if (!c.isRunning()) return;
             const int id = cmdRepo_.nextId();
             cmdRepo_.add(id, c.getCfd(), cmd, /*monitor=*/false);
-            if (server_.send(
-                    "EXEC",
-                    "id=" + std::to_string(id) + " monitor=0\n" + cmd + "\n",
-                    c.getCfd())) {
-                cmdRepo_.start(id);
-                launched.push_back(id);
-                std::cout << "[exec] launched on conn_id=" << c.getCfd()
-                          << " id=" << id << " (batch)\n";
-            } else {
-                std::cout << "[exec] failed to send to conn_id=" << c.getCfd()
-                          << "\n";
-                cmdRepo_.erase(id);
-            }
+            launched.push_back(std::make_pair(id, c.getCfd()));
         });
+
+        for (auto& l: launched) {
+            if(server_.send("EXEC",
+                      "id=" + std::to_string(l.first) + " monitor=0\n" + cmd + "\n",
+                      l.second)){
+                        cmdRepo_.start(l.first);
+                      }
+                      else {
+                        std::cout << "[exec] failed to send to conn_id=" << l.second << "\n";
+                        cmdRepo_.erase(l.first);
+
+                      }
+        }
 
         if (launched.empty()) {
             std::cout << "no active connections\n";
             return;
         }
 
-        for (int id : launched) wait_done_print(id, "all", /*follow=*/false);
+        for (auto& id : launched) wait_done_print(id.first, "all", /*follow=*/false);
 
         std::cout << "[exec] summary:\n";
-        for (int id : launched) {
-            auto r = cmdRepo_.get(id);
+        for (auto& id : launched) {
+            auto r = cmdRepo_.get(id.first);
             if (!r) {
-                std::cout << "  id=" << id << " no-result\n";
+                std::cout << "  id=" << id.first << " no-result\n";
                 continue;
             }
-            std::cout << "  id=" << id << " conn=" << r->conn_id
+            std::cout << "  id=" << id.first << " conn=" << r->conn_id
                       << " code=" << r->exit_code << " out=" << r->bytes_out
                       << "B"
                       << " chunks=" << r->chunks_out << "\n";
@@ -185,7 +186,6 @@ void Console::runExec(bool all, int conn_id, std::string& cmd) {
         return;
     }
 
-    // individual
     if (conn_id <= 0) {
         std::cout << "exec: invalid conn_id\n";
         return;
@@ -198,8 +198,7 @@ void Console::runExec(bool all, int conn_id, std::string& cmd) {
                       conn_id)) {
         std::cout << "[exec] failed to send to conn_id=" << conn_id << "\n";
         cmdRepo_.erase(id);
-        return;
-    }
+        return;    }
     cmdRepo_.start(id);
     std::cout << "[exec] launched id=" << id << " on conn_id=" << conn_id
               << " (monitor)\n";
@@ -207,7 +206,7 @@ void Console::runExec(bool all, int conn_id, std::string& cmd) {
 }
 
 int Console::repl() {
-    std::cout << "Vigilor CLI — type 'help' for commands.\n";
+    std::cout << "Specula CLI — type 'help' for commands.\n";
     std::string line;
 
     while (true) {
@@ -231,7 +230,6 @@ int Console::repl() {
         rtrim(line);
         if (line.empty()) continue;
 
-        // split primeira palavra
         std::istringstream iss(line);
         std::string cmd;
         iss >> cmd;
@@ -239,16 +237,16 @@ int Console::repl() {
         if (cmd == "help") {
             std::cout
                 << "Commands:\n"
-                   "  status                               - request and print "
+                   "  status                           - request and print "
                    "current status from all agents\n"
-                   "  status -w [ms]                       - watch mode; "
+                   "  status -w [ms]                   - watch mode; "
                    "refresh every [ms] (default 1500)\n"
-                   "  exec <conn_id|all> [-m] <command...> - execute command "
+                   "  exec <conn_id|all> <command...>  - execute command "
                    "on agent(s)\n"
-                   "  ls                                   - list active "
+                   "  ls                               - list active "
                    "connections\n"
-                   "  clear                                - clear the screen\n"
-                   "  quit | exit                          - leave the CLI\n";
+                   "  clear                            - clear the screen\n"
+                   "  quit | exit                      - leave the CLI\n";
             continue;
         }
 
