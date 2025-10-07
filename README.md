@@ -1,7 +1,7 @@
 # 🛡️ Specula
 
 **Specula** is a lightweight, terminal-based monitoring and control system for Linux systems.  
-It provides real-time system metrics (CPU, memory, disk usage) and remote command execution capabilities through a secure TCP socket protocol.
+It provides real-time system metrics (CPU, memory, disk usage) and remote command execution capabilities through a TCP socket protocol.
 
 ---
 
