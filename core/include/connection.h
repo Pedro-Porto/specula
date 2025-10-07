@@ -113,6 +113,15 @@ class Connection {
 
     // internals
     void readLoop();
+    /**
+     * @brief Dispatches a payload to the appropriate handler based on the command.
+     *
+     * This function extracts the command from the payload and looks up the corresponding
+     * handler in the handlers map. If a handler is found, it is executed asynchronously
+     * with the remaining payload.
+     *
+     * @param payload The payload containing the command and its arguments.
+     */
     void dispatch(const std::string& payload);
     static bool writeAll(int fd, const void* buf, size_t n);
     static bool readSome(int fd, void* buf, size_t n, ssize_t& outRead);
